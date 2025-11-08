@@ -1,8 +1,9 @@
+// App.jsx
 import { useState, useRef } from 'react';
 import Map, { Marker, Popup, NavigationControl, GeolocateControl } from 'react-map-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
+import SearchForm from './SearchForm'; // Import the new component
 
-// Votre token Mapbox
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiaGluZGluYSIsImEiOiJjbWhxNTd1NXEwZDRyMmxxemU0OHhzNGk2In0.XHlACAI8QmlaBfFD5HH3CA';
 
 function App() {
@@ -17,7 +18,18 @@ function App() {
   const [userLocation, setUserLocation] = useState(null);
   const mapRef = useRef();
 
-  // Données des pharmacies
+  // Critères de recherche activés
+  const [enabledCriteria, setEnabledCriteria] = useState({
+    localisation: true,
+    medicament: false,
+    distance: false
+  });
+
+  const [searchLocation, setSearchLocation] = useState('');
+  const [searchMedicine, setSearchMedicine] = useState('');
+  const [searchDistance, setSearchDistance] = useState('5');
+  const [showSearchForm, setShowSearchForm] = useState(true);
+
   const pharmacies = [
     {
       id: 1,
@@ -69,7 +81,6 @@ function App() {
     }
   ];
 
-  // Styles de carte
   const mapStyles = {
     'streets-v12': { 
       name: '🗺️ Streets', 
@@ -96,6 +107,22 @@ function App() {
     });
   };
 
+  const toggleCriteria = (criteria) => {
+    setEnabledCriteria(prev => ({
+      ...prev,
+      [criteria]: !prev[criteria]
+    }));
+  };
+
+  const handleSearch = () => {
+    const activeCriteria = {
+      localisation: enabledCriteria.localisation ? searchLocation : null,
+      medicament: enabledCriteria.medicament ? searchMedicine : null,
+      distance: enabledCriteria.distance ? searchDistance : null
+    };
+    console.log('Recherche avec critères actifs:', activeCriteria);
+  };
+
   return (
     <div style={{ 
       width: '100%', 
@@ -119,40 +146,6 @@ function App() {
         </p>
       </header>
 
-      {/* Sélecteur de style */}
-      <div style={{
-        padding: '15px 20px',
-        backgroundColor: 'white',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-        display: 'flex',
-        gap: '10px',
-        flexWrap: 'wrap',
-        alignItems: 'center'
-      }}>
-        <span style={{ fontWeight: 'bold', color: '#1a1a2e' }}>
-          Style de carte :
-        </span>
-        {Object.entries(mapStyles).map(([key, style]) => (
-          <button
-            key={key}
-            onClick={() => setMapStyle(key)}
-            style={{
-              padding: '10px 18px',
-              backgroundColor: mapStyle === key ? '#16c79a' : '#ecf0f1',
-              color: mapStyle === key ? 'white' : '#1a1a2e',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontSize: '13px',
-              fontWeight: mapStyle === key ? 'bold' : 'normal',
-              whiteSpace: 'nowrap'
-            }}
-          >
-            {style.name}
-          </button>
-        ))}
-      </div>
-
       {/* Carte */}
       <div style={{ flex: 1, position: 'relative' }}>
         <Map
@@ -163,9 +156,9 @@ function App() {
           style={{ width: '100%', height: '100%' }}
           ref={mapRef}
         >
-          <NavigationControl position="top-right" />
+          <NavigationControl position="bottom-right" />
           <GeolocateControl
-            position="top-right"
+            position="bottom-right"
             trackUserLocation
             onGeolocate={handleGeolocate}
             showUserHeading
@@ -303,68 +296,51 @@ function App() {
           )}
         </Map>
 
-        {/* Statistiques */}
-        <div style={{
-          position: 'absolute',
-          top: '20px',
-          left: '20px',
-          backgroundColor: 'white',
-          padding: '20px',
-          borderRadius: '12px',
-          boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
-          zIndex: 1000
-        }}>
-          <h4 style={{ margin: '0 0 15px 0', fontSize: '16px', fontWeight: 'bold' }}>
-            📊 Statistiques
-          </h4>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '14px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px', backgroundColor: '#fef5e7', borderRadius: '6px' }}>
-              <span>Total</span>
-              <strong>{pharmacies.length}</strong>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px', backgroundColor: '#fadbd8', borderRadius: '6px' }}>
-              <span>De garde</span>
-              <strong style={{ color: '#e74c3c' }}>{pharmacies.filter(p => p.isGuard).length}</strong>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px', backgroundColor: '#d5f4e6', borderRadius: '6px' }}>
-              <span>Ouvertes</span>
-              <strong style={{ color: '#16c79a' }}>{pharmacies.filter(p => !p.isGuard).length}</strong>
-            </div>
-          </div>
-        </div>
+        {/* Formulaire Multi-critères Overlay */}
+        <SearchForm
+          enabledCriteria={enabledCriteria}
+          setEnabledCriteria={setEnabledCriteria}
+          searchLocation={searchLocation}
+          setSearchLocation={setSearchLocation}
+          searchMedicine={searchMedicine}
+          setSearchMedicine={setSearchMedicine}
+          searchDistance={searchDistance}
+          setSearchDistance={setSearchDistance}
+          showSearchForm={showSearchForm}
+          setShowSearchForm={setShowSearchForm}
+          toggleCriteria={toggleCriteria}
+          handleSearch={handleSearch}
+          mapStyle={mapStyle}
+          setMapStyle={setMapStyle}
+          mapStyles={mapStyles}
+        />
 
-        {/* Légende */}
+        {/* Statistiques */}
         <div style={{
           position: 'absolute',
           bottom: '20px',
           left: '20px',
           backgroundColor: 'white',
-          padding: '18px',
-          borderRadius: '12px',
+          padding: '15px',
+          borderRadius: '10px',
           boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
           zIndex: 1000
         }}>
-          <h4 style={{ margin: '0 0 12px 0', fontSize: '15px', fontWeight: 'bold' }}>
-            🗺️ Légende
+          <h4 style={{ margin: '0 0 10px 0', fontSize: '14px', fontWeight: 'bold' }}>
+            📊 Stats
           </h4>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '14px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span style={{ fontSize: '24px' }}>🔴</span>
-              <span>Pharmacie de garde</span>
+          <div style={{ display: 'flex', gap: '15px', fontSize: '13px' }}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#1a1a2e' }}>{pharmacies.length}</div>
+              <div style={{ fontSize: '11px', color: '#7f8c8d' }}>Total</div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span style={{ fontSize: '24px' }}>🟢</span>
-              <span>Pharmacie ouverte</span>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#e74c3c' }}>{pharmacies.filter(p => p.isGuard).length}</div>
+              <div style={{ fontSize: '11px', color: '#7f8c8d' }}>Garde</div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div style={{
-                width: '20px',
-                height: '20px',
-                borderRadius: '50%',
-                backgroundColor: '#3498db',
-                border: '2px solid white'
-              }} />
-              <span>Votre position</span>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#16c79a' }}>{pharmacies.filter(p => !p.isGuard).length}</div>
+              <div style={{ fontSize: '11px', color: '#7f8c8d' }}>Ouvertes</div>
             </div>
           </div>
         </div>
